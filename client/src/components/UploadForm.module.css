@@ -1,5 +1,5 @@
 .wrapper {
-  animation: scaleIn 350ms ease;
+  animation: fadeInScale 400ms var(--smooth);
 }
 
 /* ─── Dropzone ─── */
@@ -15,23 +15,26 @@
   text-align: center;
   cursor: pointer;
   background: var(--gradient-card);
-  transition: all var(--transition-normal);
+  transition: all 400ms var(--smooth);
 }
 .dropzone:hover, .dropzone:focus-visible {
   border-color: var(--accent-violet);
   background: rgba(37,99,235,0.04);
-  box-shadow: var(--shadow-glow);
+  box-shadow: 0 0 40px rgba(37,99,235,0.12);
   outline: none;
+  transform: scale(1.01);
 }
 .dropzone.dragging {
   border-color: var(--accent-cyan);
-  background: rgba(59,130,246,0.04);
-  box-shadow: var(--shadow-glow-cyan);
+  background: rgba(59,130,246,0.06);
+  box-shadow: 0 0 50px rgba(59,130,246,0.2);
   animation: borderPulse 1.5s ease-in-out infinite;
+  transform: scale(1.02);
 }
 .dropIcon {
   font-size: 3.5rem;
   animation: float 3s ease-in-out infinite;
+  color: var(--accent-violet);
 }
 .dropText {
   font-family: var(--font-heading);
@@ -61,6 +64,7 @@
   display: flex;
   flex-direction: column;
   gap: 20px;
+  animation: fadeInScale 400ms var(--smooth);
 }
 .previewMedia {
   border-radius: var(--radius-lg);
@@ -71,6 +75,10 @@
   align-items: center;
   justify-content: center;
   border: 1px solid var(--border-card);
+  transition: box-shadow 400ms;
+}
+.previewMedia:hover {
+  box-shadow: var(--shadow-card);
 }
 .previewMedia img,
 .previewMedia video {
@@ -109,6 +117,7 @@
   gap: 12px;
   font-size: 0.85rem;
   color: var(--text-secondary);
+  animation: slideUp 300ms var(--smooth);
 }
 .progressTrack {
   flex: 1;
@@ -121,7 +130,16 @@
   height: 100%;
   background: var(--gradient-brand);
   border-radius: 99px;
-  transition: width 150ms ease;
+  transition: width 200ms ease;
+  position: relative;
+}
+.progressBar::after {
+  content: '';
+  position: absolute;
+  top: 0; right: 0; bottom: 0;
+  width: 40px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4));
+  animation: shimmer 1.5s infinite linear;
 }
 
 .actions {
@@ -136,6 +154,7 @@
   gap: 10px;
   color: var(--text-secondary);
   font-size: 0.9rem;
+  animation: pulse 2s ease-in-out infinite;
 }
 .spinner {
   display: inline-block;
@@ -153,6 +172,7 @@
   background: rgba(244,63,94,0.1);
   border: 1px solid rgba(244,63,94,0.25);
   border-radius: var(--radius-sm);
+  animation: shake 400ms ease;
 }
 
 /* ─── Success ─── */
@@ -163,7 +183,7 @@
   gap: 16px;
   padding: 64px 40px;
   text-align: center;
-  animation: scaleIn 400ms ease;
+  animation: fadeInScale 500ms var(--smooth);
 }
 .successIcon {
   width: 72px; height: 72px;
@@ -175,16 +195,18 @@
   justify-content: center;
   font-size: 2rem;
   color: var(--color-success);
-  animation: scaleIn 500ms ease;
+  animation: successBounce 600ms var(--spring);
 }
 .success h3 {
   font-family: var(--font-heading);
   font-size: 1.5rem;
   font-weight: 700;
   color: var(--text-primary);
+  animation: slideUp 500ms var(--spring) 200ms both;
 }
 .success p {
   color: var(--text-secondary);
+  animation: slideUp 500ms var(--spring) 300ms both;
 }
 .successActions {
   display: flex;
@@ -192,4 +214,5 @@
   margin-top: 8px;
   flex-wrap: wrap;
   justify-content: center;
+  animation: slideUp 500ms var(--spring) 400ms both;
 }

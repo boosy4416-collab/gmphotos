@@ -21,6 +21,7 @@
   border-radius: 50%;
   background: radial-gradient(circle, rgba(37,99,235,0.08) 0%, transparent 70%);
   pointer-events: none;
+  animation: bgDrift 12s ease-in-out infinite;
 }
 .heroBg::after {
   content: '';
@@ -31,6 +32,7 @@
   border-radius: 50%;
   background: radial-gradient(circle, rgba(59,130,246,0.06) 0%, transparent 70%);
   pointer-events: none;
+  animation: bgDrift 15s ease-in-out infinite reverse;
 }
 
 .heroContent {
@@ -39,7 +41,7 @@
   display: flex;
   flex-direction: column;
   gap: 14px;
-  animation: slideUp 500ms ease;
+  animation: slideUp 700ms cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 .heroTitle {
   font-family: var(--font-heading);
@@ -53,12 +55,14 @@
   color: var(--text-secondary);
   max-width: 520px;
   line-height: 1.6;
+  animation: slideUp 700ms cubic-bezier(0.34, 1.56, 0.64, 1) 100ms both;
 }
 .heroStats {
   display: flex;
   align-items: center;
   gap: 16px;
   margin-top: 8px;
+  animation: slideUp 700ms cubic-bezier(0.34, 1.56, 0.64, 1) 200ms both;
 }
 .stat {
   font-size: 0.9rem;
@@ -76,14 +80,14 @@
   background: var(--border-subtle);
 }
 
+/* ─── Selection Screen ─── */
 .selectionScreen {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: 60vh;
+  min-height: 65vh;
   text-align: center;
-  animation: fadeIn 600ms ease;
   padding: 40px 20px;
 }
 
@@ -92,6 +96,7 @@
   font-weight: 800;
   margin-bottom: 12px;
   letter-spacing: -0.02em;
+  animation: slideUp 600ms var(--spring) both;
 }
 
 .selectionSub {
@@ -99,6 +104,7 @@
   color: var(--text-secondary);
   margin-bottom: 40px;
   max-width: 480px;
+  animation: slideUp 600ms var(--spring) 100ms both;
 }
 
 .selectionCards {
@@ -110,41 +116,63 @@
 
 .selectionCard {
   flex: 1;
-  padding: 48px 32px;
-  border-radius: 20px;
-  background: var(--bg-glass);
-  border: 1px solid var(--border-glass);
-  box-shadow: var(--shadow-premium);
+  padding: 56px 32px;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.85);
+  border: 2px solid var(--border-card);
+  box-shadow: var(--shadow-card);
   cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 400ms var(--smooth);
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
+  position: relative;
+  overflow: hidden;
+}
+.selectionCard::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 120%, rgba(37,99,235,0.08) 0%, transparent 70%);
+  opacity: 0;
+  transition: opacity 500ms;
+}
+.selectionCard:hover::before { opacity: 1; }
+
+.selectionCard:first-child {
+  animation: fadeInScale 500ms var(--spring) 200ms both;
+}
+.selectionCard:last-child {
+  animation: fadeInScale 500ms var(--spring) 350ms both;
 }
 
 .selectionCard:hover {
-  transform: translateY(-8px);
-  border-color: var(--primary);
-  box-shadow: 0 20px 40px -15px rgba(37, 99, 235, 0.15);
-  background: rgba(255, 255, 255, 0.95);
+  transform: translateY(-10px) scale(1.02);
+  border-color: var(--accent-violet);
+  box-shadow: 0 24px 48px -12px rgba(37, 99, 235, 0.2);
+}
+.selectionCard:active {
+  transform: translateY(-4px) scale(0.98);
 }
 
 .selectionCard h3 {
-  font-size: 2rem;
-  font-weight: 700;
-  color: var(--primary);
+  font-size: 2.2rem;
+  font-weight: 800;
+  background: var(--gradient-brand);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
   margin: 0;
+  position: relative;
+  z-index: 1;
 }
 
 .selectionCard span {
   font-size: 0.95rem;
   color: var(--text-secondary);
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+  position: relative;
+  z-index: 1;
 }
 
 @media (max-width: 600px) {
