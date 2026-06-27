@@ -1,0 +1,24 @@
+.page { padding-bottom: 80px; }
+
+.loadingWrap { display: flex; flex-direction: column; gap: 20px; }
+.skeletonTop { height: 42px; border-radius: var(--radius-md); max-width: 300px; }
+.skeletonMedia { height: 480px; border-radius: var(--radius-xl); }
+.skeletonBar { height: 80px; border-radius: var(--radius-lg); }
+
+.notFound {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 100px 24px;
+  text-align: center;
+  animation: fadeIn 300ms ease;
+}
+.notFound span { font-size: 3.5rem; }
+.notFound h2 {
+  font-family: var(--font-heading);
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.notFound p { color: var(--text-secondary); font-size: 0.95rem; margin-bottom: 8px; }

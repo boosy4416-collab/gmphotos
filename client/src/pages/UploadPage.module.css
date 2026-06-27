@@ -1,0 +1,53 @@
+.page { padding-bottom: 80px; }
+.header {
+  text-align: center;
+  margin-bottom: 48px;
+  animation: slideUp 400ms ease;
+}
+.title {
+  font-family: var(--font-heading);
+  font-size: clamp(2rem, 4vw, 3rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin-bottom: 12px;
+}
+.subtitle {
+  font-size: 1rem;
+  color: var(--text-secondary);
+}
+
+.formWrap {
+  max-width: 680px;
+  margin: 0 auto 48px;
+}
+
+.tips {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+  max-width: 680px;
+  margin: 0 auto;
+}
+.tip {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 18px 20px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  animation: fadeIn 600ms ease;
+}
+.tipIcon { font-size: 1.6rem; flex-shrink: 0; }
+.tip strong {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+.tip p {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+}

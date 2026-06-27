@@ -1,0 +1,195 @@
+.wrapper {
+  animation: scaleIn 350ms ease;
+}
+
+/* ─── Dropzone ─── */
+.dropzone {
+  position: relative;
+  border: 2px dashed var(--border-accent);
+  border-radius: var(--radius-xl);
+  padding: 64px 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  text-align: center;
+  cursor: pointer;
+  background: var(--gradient-card);
+  transition: all var(--transition-normal);
+}
+.dropzone:hover, .dropzone:focus-visible {
+  border-color: var(--accent-violet);
+  background: rgba(37,99,235,0.04);
+  box-shadow: var(--shadow-glow);
+  outline: none;
+}
+.dropzone.dragging {
+  border-color: var(--accent-cyan);
+  background: rgba(59,130,246,0.04);
+  box-shadow: var(--shadow-glow-cyan);
+  animation: borderPulse 1.5s ease-in-out infinite;
+}
+.dropIcon {
+  font-size: 3.5rem;
+  animation: float 3s ease-in-out infinite;
+}
+.dropText {
+  font-family: var(--font-heading);
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.dropSub {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+.dropTypes {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-top: 6px;
+  padding: 5px 14px;
+  border-radius: 99px;
+  background: rgba(37,99,235,0.03);
+  border: 1px solid var(--border-subtle);
+}
+.fileInput {
+  display: none;
+}
+
+/* ─── Preview ─── */
+.preview {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.previewMedia {
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: var(--bg-elevated);
+  max-height: 400px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border-card);
+}
+.previewMedia img,
+.previewMedia video {
+  max-height: 400px;
+  width: 100%;
+  object-fit: contain;
+}
+.fileInfo {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 18px;
+  border-radius: var(--radius-md);
+  background: rgba(37,99,235,0.03);
+  border: 1px solid var(--border-subtle);
+}
+.fileName {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 70%;
+}
+.fileSize {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+/* ─── Progress ─── */
+.progressWrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+.progressTrack {
+  flex: 1;
+  height: 6px;
+  background: rgba(37,99,235,0.1);
+  border-radius: 99px;
+  overflow: hidden;
+}
+.progressBar {
+  height: 100%;
+  background: var(--gradient-brand);
+  border-radius: 99px;
+  transition: width 150ms ease;
+}
+
+.actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.uploadingText {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+.spinner {
+  display: inline-block;
+  width: 18px; height: 18px;
+  border: 2px solid var(--border-accent);
+  border-top-color: var(--accent-violet);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.error {
+  color: var(--color-error);
+  font-size: 0.88rem;
+  padding: 10px 16px;
+  background: rgba(244,63,94,0.1);
+  border: 1px solid rgba(244,63,94,0.25);
+  border-radius: var(--radius-sm);
+}
+
+/* ─── Success ─── */
+.success {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 64px 40px;
+  text-align: center;
+  animation: scaleIn 400ms ease;
+}
+.successIcon {
+  width: 72px; height: 72px;
+  border-radius: 50%;
+  background: rgba(16,185,129,0.15);
+  border: 2px solid var(--color-success);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  color: var(--color-success);
+  animation: scaleIn 500ms ease;
+}
+.success h3 {
+  font-family: var(--font-heading);
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.success p {
+  color: var(--text-secondary);
+}
+.successActions {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+}

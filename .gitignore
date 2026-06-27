@@ -1,0 +1,18 @@
+# Root
+node_modules/
+.env
+*.log
+.DS_Store
+Thumbs.db
+*.zip
+
+# Server
+server/node_modules/
+server/uploads/
+server/test*.js
+server/delete_videos.js
+server/db.json
+
+# Client
+client/node_modules/
+client/dist/

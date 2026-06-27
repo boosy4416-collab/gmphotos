@@ -1,0 +1,46 @@
+dialog.dialog {
+  border: none;
+  border-radius: var(--radius-xl);
+  padding: 0;
+  background: transparent;
+  max-width: 420px;
+  width: 90%;
+}
+dialog.dialog::backdrop {
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+}
+dialog.dialog[open] {
+  animation: scaleIn 250ms ease;
+}
+
+.inner {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-xl);
+  padding: 36px 32px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+  box-shadow: 0 24px 80px rgba(0,0,0,0.6), var(--shadow-glow);
+}
+.icon { font-size: 2.5rem; }
+.title {
+  font-family: var(--font-heading);
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.message {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+.actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+  flex-direction: row-reverse;
+}

@@ -1,0 +1,67 @@
+.wrapper { animation: fadeIn 300ms ease; }
+
+.filterBar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 28px;
+  flex-wrap: wrap;
+}
+.filterBtn {
+  padding: 8px 20px;
+  border-radius: 99px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  background: rgba(37,99,235,0.04);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-subtle);
+  transition: all var(--transition-fast);
+  cursor: pointer;
+}
+.filterBtn:hover {
+  background: rgba(37,99,235,0.08);
+  color: var(--text-primary);
+  border-color: var(--border-accent);
+}
+.filterBtn.active {
+  background: rgba(37,99,235,0.12);
+  color: var(--accent-violet-dark);
+  border-color: var(--border-accent);
+  box-shadow: 0 0 16px rgba(37,99,235,0.15);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 20px;
+}
+
+.skeletonCard {
+  aspect-ratio: 4/3;
+  border-radius: var(--radius-lg);
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 80px 24px;
+  text-align: center;
+  animation: fadeIn 400ms ease;
+}
+.emptyIcon {
+  font-size: 4rem;
+  animation: float 3s ease-in-out infinite;
+}
+.empty h3 {
+  font-family: var(--font-heading);
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.empty p {
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  margin-bottom: 8px;
+}
