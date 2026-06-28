@@ -2,11 +2,11 @@ const rateLimit = require("express-rate-limit");
 
 /**
  * Rate limiter for upload endpoints.
- * Allows 10 requests per minute per IP.
+ * Allows 30 metadata saves per minute per IP (supports multi-file batches).
  */
 const uploadLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
-  max: 10,
+  max: 30,
   standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
   legacyHeaders: false,  // Disable the `X-RateLimit-*` headers
   message: {

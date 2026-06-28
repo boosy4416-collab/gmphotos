@@ -11,7 +11,7 @@ export default function UploadPage() {
             Upload <span className="gradient-text">Media</span>
           </h1>
           <p className={styles.subtitle}>
-            Share your photos and videos with the world. No account needed.
+            Share your photos and videos with the world. Select multiple files at once — no account needed.
           </p>
         </div>
 
@@ -38,7 +38,7 @@ export default function UploadPage() {
             <span className={styles.tipIcon}><Infinity size={24} /></span>
             <div>
               <strong>No Size Limit</strong>
-              <p>Upload files of any size</p>
+              <p>Upload one or many files of any size</p>
             </div>
           </div>
         </div>

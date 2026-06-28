@@ -1,9 +1,10 @@
 import { useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Check, FolderOpen, CloudUpload, Upload as UploadIcon, X } from 'lucide-react'
+import { Check, FolderOpen, CloudUpload, Upload as UploadIcon, X, Plus, Image as ImageIcon, Film } from 'lucide-react'
 import styles from './UploadForm.module.css'
 
 const ACCEPTED = '.jpg,.jpeg,.png,.gif,.webp,.bmp,.svg,.tiff,.mp4,.webm,.mov,.avi,.mkv,.wmv'
+const BAD_EXTS = ['exe', 'bat', 'cmd', 'sh', 'ps1', 'msi', 'com', 'scr', 'js', 'jar', 'vbs']
 
 function formatSize(bytes) {
   if (bytes < 1024) return `${bytes} B`
@@ -12,113 +13,189 @@ function formatSize(bytes) {
   return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`
 }
 
+function makeFileEntry(file) {
+  const ext = file.name.split('.').pop().toLowerCase()
+  if (BAD_EXTS.includes(ext)) {
+    return { error: `"${file.name}" is not an allowed file type.` }
+  }
+  const url = URL.createObjectURL(file)
+  const type = file.type.startsWith('video') ? 'video' : 'image'
+  return {
+    id: crypto.randomUUID(),
+    file,
+    preview: { url, type },
+    status: 'pending',
+    progress: 0,
+    error: null,
+    uploadedId: null,
+  }
+}
+
+async function uploadFileToDrive(file, preview, accessToken, folderId, category, onProgress) {
+  const initRes = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+      'X-Upload-Content-Type': file.type || 'application/octet-stream',
+    },
+    body: JSON.stringify({
+      name: file.name,
+      parents: folderId ? [folderId] : [],
+    }),
+  })
+
+  if (!initRes.ok) throw new Error('Failed to initialize upload')
+
+  const uploadUrl = initRes.headers.get('Location')
+  if (!uploadUrl) throw new Error('No upload URL received')
+
+  const driveFile = await new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest()
+    xhr.open('PUT', uploadUrl)
+    xhr.upload.onprogress = e => {
+      if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100))
+    }
+    xhr.onload = () => {
+      if (xhr.status === 200 || xhr.status === 201) {
+        resolve(JSON.parse(xhr.responseText))
+      } else {
+        reject(new Error(`Upload failed (${xhr.status})`))
+      }
+    }
+    xhr.onerror = () => reject(new Error('Network error during upload'))
+    xhr.send(file)
+  })
+
+  const metaRes = await fetch('/api/upload/metadata', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      originalName: file.name,
+      driveFileId: driveFile.id,
+      type: preview.type,
+      size: file.size,
+      category,
+    }),
+  })
+
+  if (!metaRes.ok) throw new Error('Failed to save file metadata')
+  return metaRes.json()
+}
+
 export default function UploadForm() {
   const navigate = useNavigate()
   const inputRef = useRef()
   const [dragging, setDragging] = useState(false)
-  const [file, setFile] = useState(null)
-  const [preview, setPreview] = useState(null)
-  const [status, setStatus] = useState('idle') // idle | uploading | success | error
-  const [progress, setProgress] = useState(0)
+  const [files, setFiles] = useState([])
+  const [status, setStatus] = useState('idle') // idle | uploading | success | partial | error
+  const [overallProgress, setOverallProgress] = useState(0)
   const [errorMsg, setErrorMsg] = useState('')
-  const [uploadedId, setUploadedId] = useState(null)
-
+  const [uploadedIds, setUploadedIds] = useState([])
   const [category, setCategory] = useState('eya')
 
-  function selectFile(f) {
-    if (!f) return
-    // Basic client-side type check
-    const ext = f.name.split('.').pop().toLowerCase()
-    const badExts = ['exe','bat','cmd','sh','ps1','msi','com','scr','js','jar','vbs']
-    if (badExts.includes(ext)) {
-      setErrorMsg('That file type is not allowed.')
-      setStatus('error')
-      return
+  function revokeEntry(entry) {
+    if (entry?.preview?.url) URL.revokeObjectURL(entry.preview.url)
+  }
+
+  function addFiles(fileList) {
+    if (!fileList?.length) return
+
+    const errors = []
+    const newEntries = []
+
+    for (const f of fileList) {
+      const entry = makeFileEntry(f)
+      if (entry.error) errors.push(entry.error)
+      else newEntries.push(entry)
     }
-    setFile(f)
-    setStatus('idle')
+
+    if (newEntries.length) {
+      setFiles(prev => [...prev, ...newEntries])
+      setStatus('idle')
+    }
+    if (errors.length) {
+      setErrorMsg(errors.join(' '))
+      if (!newEntries.length) setStatus('error')
+    } else {
+      setErrorMsg('')
+    }
+  }
+
+  function removeFile(id) {
+    setFiles(prev => {
+      const entry = prev.find(f => f.id === id)
+      revokeEntry(entry)
+      return prev.filter(f => f.id !== id)
+    })
     setErrorMsg('')
-    const url = URL.createObjectURL(f)
-    setPreview({ url, type: f.type.startsWith('video') ? 'video' : 'image' })
+    setStatus('idle')
   }
 
   function onDrop(e) {
     e.preventDefault()
     setDragging(false)
-    selectFile(e.dataTransfer.files[0])
+    addFiles(e.dataTransfer.files)
+  }
+
+  function updateFile(id, patch) {
+    setFiles(prev => prev.map(f => (f.id === id ? { ...f, ...patch } : f)))
   }
 
   async function handleUpload() {
-    if (!file) return
+    if (!files.length || status === 'uploading') return
+
     setStatus('uploading')
-    setProgress(0)
+    setOverallProgress(0)
+    setErrorMsg('')
+    setUploadedIds([])
+
+    const pending = files.filter(f => f.status !== 'done')
+    const total = pending.length
+    let completed = 0
+    const ids = []
 
     try {
-      // 1. Get access token from backend
       const tokenRes = await fetch('/api/drive/token')
       if (!tokenRes.ok) throw new Error('Failed to get upload authorization')
       const { accessToken, folderId } = await tokenRes.json()
 
-      // 2. Init resumable upload to Google Drive
-      const metadata = {
-        name: file.name,
-        parents: folderId ? [folderId] : []
+      for (const entry of pending) {
+        updateFile(entry.id, { status: 'uploading', progress: 0, error: null })
+
+        try {
+          const result = await uploadFileToDrive(
+            entry.file,
+            entry.preview,
+            accessToken,
+            folderId,
+            category,
+            progress => updateFile(entry.id, { progress })
+          )
+
+          completed++
+          ids.push(result.id)
+          updateFile(entry.id, { status: 'done', progress: 100, uploadedId: result.id })
+          setOverallProgress(Math.round((completed / total) * 100))
+        } catch (err) {
+          updateFile(entry.id, { status: 'error', error: err.message })
+          completed++
+          setOverallProgress(Math.round((completed / total) * 100))
+        }
       }
-      
-      const initRes = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-          'X-Upload-Content-Type': file.type || 'application/octet-stream'
-        },
-        body: JSON.stringify(metadata)
-      })
-      
-      if (!initRes.ok) throw new Error('Failed to initialize upload')
-      
-      const uploadUrl = initRes.headers.get('Location')
-      if (!uploadUrl) throw new Error('No upload URL received')
 
-      // 3. Upload the actual file bytes using XMLHttpRequest to track progress
-      const driveFile = await new Promise((resolve, reject) => {
-        const xhr = new XMLHttpRequest()
-        xhr.open('PUT', uploadUrl)
-        xhr.upload.onprogress = e => {
-          if (e.lengthComputable) setProgress(Math.round((e.loaded / e.total) * 100))
-        }
-        xhr.onload = () => {
-          if (xhr.status === 200 || xhr.status === 201) {
-            resolve(JSON.parse(xhr.responseText))
-          } else {
-            console.error('Drive upload failed:', xhr.status, xhr.responseText);
-            reject(new Error(`Upload failed (${xhr.status}): ${xhr.responseText}`))
-          }
-        }
-        xhr.onerror = () => reject(new Error('Network error during upload (CORS or dropped connection)'))
-        xhr.send(file)
-      })
+      setUploadedIds(ids)
 
-      // 4. Send metadata to backend to save in MongoDB
-      const metaRes = await fetch('/api/upload/metadata', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          originalName: file.name,
-          driveFileId: driveFile.id,
-          type: preview.type, // 'image' or 'video'
-          size: file.size,
-          category: category
-        })
-      })
-      
-      if (!metaRes.ok) throw new Error('Failed to save file metadata')
-      
-      const result = await metaRes.json()
-      
-      setProgress(100)
-      setUploadedId(result.id)
-      setStatus('success')
+      const failed = pending.length - ids.length
+      if (failed === 0) {
+        setStatus('success')
+      } else if (ids.length > 0) {
+        setStatus('partial')
+        setErrorMsg(`${ids.length} uploaded, ${failed} failed.`)
+      } else {
+        setStatus('error')
+        setErrorMsg('All uploads failed. Please try again.')
+      }
     } catch (err) {
       setErrorMsg(err.message)
       setStatus('error')
@@ -126,43 +203,51 @@ export default function UploadForm() {
   }
 
   function reset() {
-    setFile(null)
-    setPreview(null)
+    files.forEach(revokeEntry)
+    setFiles([])
     setStatus('idle')
-    setProgress(0)
+    setOverallProgress(0)
     setErrorMsg('')
-    setUploadedId(null)
+    setUploadedIds([])
     if (inputRef.current) inputRef.current.value = ''
   }
 
+  const doneCount = files.filter(f => f.status === 'done').length || uploadedIds.length
+  const isUploading = status === 'uploading'
+  const hasFiles = files.length > 0
+
   return (
     <div className={styles.wrapper}>
-      {status === 'success' ? (
+      {status === 'success' || status === 'partial' ? (
         <div className={styles.success}>
           <div className={styles.successIcon}><Check size={40} /></div>
-          <h3>Upload Successful!</h3>
-          <p>Your file has been shared to the gallery.</p>
+          <h3>{status === 'success' ? 'Upload Successful!' : 'Upload Complete'}</h3>
+          <p>
+            {doneCount === 1
+              ? 'Your file has been shared to the gallery.'
+              : `${doneCount} files have been shared to the gallery.`}
+            {status === 'partial' && errorMsg && ` ${errorMsg}`}
+          </p>
           <div className={styles.successActions}>
             <button
               className="btn-primary"
-              onClick={() => navigate(`/media/${uploadedId}`)}
+              onClick={() => navigate('/')}
               id="upload-view-btn"
             >
-              View Media
+              View Gallery
             </button>
             <button
               className="btn-ghost"
               onClick={reset}
               id="upload-another-btn"
             >
-              Upload Another
+              Upload More
             </button>
           </div>
         </div>
       ) : (
         <>
-          {/* Drop zone */}
-          {!file ? (
+          {!hasFiles ? (
             <div
               className={`${styles.dropzone} ${dragging ? styles.dragging : ''}`}
               onDragOver={e => { e.preventDefault(); setDragging(true) }}
@@ -171,7 +256,7 @@ export default function UploadForm() {
               onClick={() => inputRef.current?.click()}
               role="button"
               tabIndex={0}
-              aria-label="Upload file drop zone"
+              aria-label="Upload files drop zone"
               id="upload-dropzone"
               onKeyDown={e => e.key === 'Enter' && inputRef.current?.click()}
             >
@@ -179,93 +264,122 @@ export default function UploadForm() {
                 {dragging ? <FolderOpen size={56} /> : <CloudUpload size={56} />}
               </div>
               <p className={styles.dropText}>
-                {dragging ? 'Drop it!' : 'Drag & drop your file here'}
+                {dragging ? 'Drop them!' : 'Drag & drop your photos and videos here'}
               </p>
-              <p className={styles.dropSub}>or click to browse</p>
+              <p className={styles.dropSub}>or click to browse — select multiple files at once</p>
               <span className={styles.dropTypes}>
                 Images & Videos • No size limit
               </span>
-              <input
-                ref={inputRef}
-                type="file"
-                accept={ACCEPTED}
-                className={styles.fileInput}
-                onChange={e => selectFile(e.target.files[0])}
-                id="upload-file-input"
-                aria-label="Choose file to upload"
-              />
             </div>
           ) : (
-            /* Preview + upload */
             <div className={styles.preview}>
-              <div className={styles.previewMedia}>
-                {preview?.type === 'image' ? (
-                  <img src={preview.url} alt="Preview" />
-                ) : (
-                  <video src={preview.url} controls />
-                )}
-              </div>
-              <div className={styles.fileInfo}>
-                <p className={styles.fileName}>{file.name}</p>
-                <p className={styles.fileSize}>{formatSize(file.size)}</p>
+              <div className={styles.fileList}>
+                {files.map(entry => (
+                  <div
+                    key={entry.id}
+                    className={`${styles.fileItem} ${entry.status === 'uploading' ? styles.fileItemActive : ''} ${entry.status === 'error' ? styles.fileItemError : ''}`}
+                  >
+                    <div className={styles.fileThumb}>
+                      {entry.preview.type === 'image' ? (
+                        <img src={entry.preview.url} alt="" />
+                      ) : (
+                        <video src={entry.preview.url} muted />
+                      )}
+                      <span className={styles.fileTypeBadge}>
+                        {entry.preview.type === 'image' ? <ImageIcon size={12} /> : <Film size={12} />}
+                      </span>
+                    </div>
+                    <div className={styles.fileMeta}>
+                      <p className={styles.fileName}>{entry.file.name}</p>
+                      <p className={styles.fileSize}>{formatSize(entry.file.size)}</p>
+                      {entry.status === 'uploading' && (
+                        <div className={styles.fileProgress}>
+                          <div className={styles.fileProgressBar} style={{ width: `${entry.progress}%` }} />
+                        </div>
+                      )}
+                      {entry.status === 'error' && (
+                        <p className={styles.fileError}>{entry.error}</p>
+                      )}
+                    </div>
+                    {!isUploading && entry.status !== 'done' && (
+                      <button
+                        type="button"
+                        className={styles.removeBtn}
+                        onClick={() => removeFile(entry.id)}
+                        aria-label={`Remove ${entry.file.name}`}
+                      >
+                        <X size={16} />
+                      </button>
+                    )}
+                    {entry.status === 'done' && (
+                      <span className={styles.doneBadge}><Check size={14} /></span>
+                    )}
+                  </div>
+                ))}
               </div>
 
-              {status !== 'success' && (
-                <div style={{ margin: '16px 0', display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'center' }}>
-                  <span style={{ fontSize: '14px', fontWeight: '500', color: 'var(--text-secondary)' }}>Who is this for?</span>
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <button
-                      type="button"
-                      className={`btn ${category === 'eya' ? 'btn-primary' : 'btn-ghost'}`}
-                      onClick={() => setCategory('eya')}
-                      style={{ minWidth: '80px', padding: '8px 16px' }}
-                      disabled={status === 'uploading'}
-                    >
-                      Eya
-                    </button>
-                    <button
-                      type="button"
-                      className={`btn ${category === 'nada' ? 'btn-primary' : 'btn-ghost'}`}
-                      onClick={() => setCategory('nada')}
-                      style={{ minWidth: '80px', padding: '8px 16px' }}
-                      disabled={status === 'uploading'}
-                    >
-                      Nada
-                    </button>
-                  </div>
-                </div>
+              {!isUploading && (
+                <button
+                  type="button"
+                  className={styles.addMoreBtn}
+                  onClick={() => inputRef.current?.click()}
+                >
+                  <Plus size={16} /> Add more files
+                </button>
               )}
 
-              {status === 'uploading' && (
-                <div className={styles.progressWrap} role="progressbar" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100}>
+              <div className={styles.categoryRow}>
+                <span className={styles.categoryLabel}>Who is this for?</span>
+                <div className={styles.categoryBtns}>
+                  <button
+                    type="button"
+                    className={`btn ${category === 'eya' ? 'btn-primary' : 'btn-ghost'}`}
+                    onClick={() => setCategory('eya')}
+                    disabled={isUploading}
+                  >
+                    Eya
+                  </button>
+                  <button
+                    type="button"
+                    className={`btn ${category === 'nada' ? 'btn-primary' : 'btn-ghost'}`}
+                    onClick={() => setCategory('nada')}
+                    disabled={isUploading}
+                  >
+                    Nada
+                  </button>
+                </div>
+              </div>
+
+              {isUploading && (
+                <div className={styles.progressWrap} role="progressbar" aria-valuenow={overallProgress} aria-valuemin={0} aria-valuemax={100}>
                   <div className={styles.progressTrack}>
-                    <div className={styles.progressBar} style={{ width: `${progress}%` }} />
+                    <div className={styles.progressBar} style={{ width: `${overallProgress}%` }} />
                   </div>
-                  <span>{progress}%</span>
+                  <span>{overallProgress}%</span>
                 </div>
               )}
 
-              {status === 'error' && (
+              {status === 'error' && errorMsg && (
                 <p className={styles.error} role="alert">{errorMsg}</p>
               )}
 
               <div className={styles.actions}>
-                {status !== 'uploading' && (
+                {!isUploading && (
                   <>
                     <button
                       className="btn-primary"
                       onClick={handleUpload}
                       id="upload-submit-btn"
-                      disabled={status === 'uploading'}
                     >
-                      <UploadIcon size={18} /> Upload
+                      <UploadIcon size={18} />
+                      Upload {files.length > 1 ? `${files.length} Files` : ''}
                     </button>
                     <button className="btn-ghost" onClick={reset} id="upload-cancel-btn">
-                      <X size={18} /> Cancel
+                      <X size={18} /> Clear All
                     </button>
                   </>
                 )}
-                {status === 'uploading' && (
+                {isUploading && (
                   <p className={styles.uploadingText}>
                     <span className={styles.spinner} /> Uploading…
                   </p>
@@ -273,6 +387,20 @@ export default function UploadForm() {
               </div>
             </div>
           )}
+
+          <input
+            ref={inputRef}
+            type="file"
+            accept={ACCEPTED}
+            multiple
+            className={styles.fileInput}
+            onChange={e => {
+              addFiles(e.target.files)
+              e.target.value = ''
+            }}
+            id="upload-file-input"
+            aria-label="Choose files to upload"
+          />
         </>
       )}
     </div>
